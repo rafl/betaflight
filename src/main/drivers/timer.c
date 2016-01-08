@@ -301,6 +301,31 @@ const timerHardware_t timerHardware[USABLE_TIMER_CHANNEL_COUNT] = {
 
 #endif
 
+#if defined(KISSFC)
+const timerHardware_t timerHardware[USABLE_TIMER_CHANNEL_COUNT] = {
+    { TIM1,  GPIOA, Pin_8,  TIM_Channel_1,  TIM1_CC_IRQn,               1, Mode_AF_PP, GPIO_PinSource8,  GPIO_AF_6,1},
+    { TIM3,  GPIOB, Pin_0,  TIM_Channel_3, TIM3_IRQn,               1, Mode_AF_PP, GPIO_PinSource0,  GPIO_AF_2,1},
+    { TIM15,  GPIOB, Pin_14,  TIM_Channel_1, TIM1_BRK_TIM15_IRQn,               1, Mode_AF_PP, GPIO_PinSource14,  GPIO_AF_1,1},
+    { TIM15,  GPIOB, Pin_15,  TIM_Channel_2, TIM1_BRK_TIM15_IRQn,               1, Mode_AF_PP, GPIO_PinSource15,  GPIO_AF_1,1},
+    { TIM16,  GPIOA, Pin_6,  TIM_Channel_1, TIM1_UP_TIM16_IRQn,               1, Mode_AF_PP, GPIO_PinSource6,  GPIO_AF_1,1},
+    { TIM17,  GPIOA, Pin_7,  TIM_Channel_1, TIM1_TRG_COM_TIM17_IRQn,               1, Mode_AF_PP, GPIO_PinSource7,  GPIO_AF_1,1},
+
+    { TIM2,  GPIOB, Pin_3,  TIM_Channel_2, TIM2_IRQn,            0, Mode_AF_PP, GPIO_PinSource3,  GPIO_AF_1,0},
+    { TIM2,  GPIOA, Pin_15,  TIM_Channel_1, TIM2_IRQn,            0, Mode_AF_PP, GPIO_PinSource15,  GPIO_AF_1,0},
+    { TIM2, GPIOA, Pin_2,  TIM_Channel_3, TIM2_IRQn,     0, Mode_AF_PP, GPIO_PinSource2,  GPIO_AF_1,0},
+    { TIM2,  GPIOB, Pin_11,  TIM_Channel_4, TIM2_IRQn,            0, Mode_AF_PP, GPIO_PinSource11,  GPIO_AF_1,0},
+    { TIM4, GPIOA, Pin_13,  TIM_Channel_2, TIM4_IRQn,     0, Mode_AF_PP, GPIO_PinSource13,  GPIO_AF_10,0},
+    { TIM8,  GPIOA, Pin_14,  TIM_Channel_3, TIM8_CC_IRQn,            0, Mode_AF_PP, GPIO_PinSource14,  GPIO_AF_5,0},
+};
+
+#define USED_TIMERS  (TIM_N(1) | TIM_N(2) | TIM_N(3) | TIM_N(4) | TIM_N(8) | TIM_N(15) | TIM_N(16) | TIM_N(17))
+#define TIMER_APB2_PERIPHERALS (RCC_APB2Periph_TIM1 | RCC_APB2Periph_TIM15 | RCC_APB2Periph_TIM17 | RCC_APB2Periph_TIM16 | RCC_APB2Periph_TIM8)
+
+#define TIMER_APB1_PERIPHERALS (RCC_APB1Periph_TIM2 | RCC_APB1Periph_TIM3  | RCC_APB1Periph_TIM4)
+#define TIMER_AHB_PERIPHERALS (RCC_AHBPeriph_GPIOA | RCC_AHBPeriph_GPIOB)
+
+#endif
+
 #define USED_TIMER_COUNT BITCOUNT(USED_TIMERS)
 #define CC_CHANNELS_PER_TIMER 4              // TIM_Channel_1..4
 
@@ -683,7 +708,11 @@ void timerChConfigOC(const timerHardware_t* timHw, bool outEnable, bool stateHig
     if(outEnable) {
         TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_Inactive;
         TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
-        TIM_OCInitStructure.TIM_OCPolarity = stateHigh ? TIM_OCPolarity_High : TIM_OCPolarity_Low;
+	if(timHw->outputInverted){
+		TIM_OCInitStructure.TIM_OCPolarity = stateHigh ? TIM_OCPolarity_Low : TIM_OCPolarity_High;
+	}else{
+		TIM_OCInitStructure.TIM_OCPolarity = stateHigh ? TIM_OCPolarity_High : TIM_OCPolarity_Low;
+	}
     } else {
         TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_Timing;
     }
