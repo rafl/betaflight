@@ -129,6 +129,7 @@ void getTaskInfo(cfTaskId_e taskId, cfTaskInfo_t * taskInfo)
     taskInfo->isEnabled = queueContains(&cfTasks[taskId]);
     taskInfo->desiredPeriod = cfTasks[taskId].desiredPeriod;
     taskInfo->staticPriority = cfTasks[taskId].staticPriority;
+    taskInfo->taskOptions = cfTasks[taskId].taskOptions;
     taskInfo->maxExecutionTime = cfTasks[taskId].maxExecutionTime;
     taskInfo->totalExecutionTime = cfTasks[taskId].totalExecutionTime;
     taskInfo->averageExecutionTime = cfTasks[taskId].averageExecutionTime;

@@ -28,12 +28,19 @@ typedef enum {
     TASK_PRIORITY_MAX = 255
 } cfTaskPriority_e;
 
+typedef enum {
+    TASK_OPTION_SCHEDULE_ALWAYS = 0,
+    TASK_OPTION_SCHEDULE_NOT_WHEN_ARMED = 1,
+    TASK_OPTION_SCHEDULE_NOT_WHEN_DISARMED = 2,
+} cfTaskOption_e;
+
 typedef struct {
     const char * taskName;
     const char * subTaskName;
     bool         isEnabled;
     uint32_t     desiredPeriod;
     uint8_t      staticPriority;
+    uint8_t      taskOptions;
     uint32_t     maxExecutionTime;
     uint32_t     totalExecutionTime;
     uint32_t     averageExecutionTime;
@@ -102,6 +109,7 @@ typedef struct {
     void (*taskFunc)(uint32_t currentTime);
     uint32_t desiredPeriod;         // target period of execution
     const uint8_t staticPriority;   // dynamicPriority grows in steps of this size, shouldn't be zero
+    uint8_t      taskOptions;
 
     /* Scheduling */
     uint16_t dynamicPriority;       // measurement of how old task was last executed, used to avoid task starvation

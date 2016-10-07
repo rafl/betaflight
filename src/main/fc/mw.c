@@ -402,12 +402,38 @@ static void updateLEDs(void)
     }
 }
 
+static void updateEnabledTasks()
+{
+  for (cfTaskId_e taskId = 0; taskId < TASK_COUNT; taskId++) {
+    if (ARMING_FLAG(ARMED)) {
+      if (cfTasks[taskId].taskOptions & TASK_OPTION_SCHEDULE_NOT_WHEN_ARMED) {
+        setTaskEnabled(taskId, false);
+      }
+
+      if (cfTasks[taskId].taskOptions & TASK_OPTION_SCHEDULE_NOT_WHEN_DISARMED) {
+        setTaskEnabled(taskId, true);
+      }
+    }
+    else {
+      if (cfTasks[taskId].taskOptions & TASK_OPTION_SCHEDULE_NOT_WHEN_DISARMED) {
+        setTaskEnabled(taskId, false);
+      }
+
+      if (cfTasks[taskId].taskOptions & TASK_OPTION_SCHEDULE_NOT_WHEN_ARMED) {
+        setTaskEnabled(taskId, true);
+      }
+    }
+  }
+}
+
 void mwDisarm(void)
 {
     armingCalibrationWasInitialised = false;
 
     if (ARMING_FLAG(ARMED)) {
         DISABLE_ARMING_FLAG(ARMED);
+
+        updateEnabledTasks();
 
 #ifdef BLACKBOX
         if (feature(FEATURE_BLACKBOX)) {
@@ -452,6 +478,8 @@ void mwArm(void)
             ENABLE_ARMING_FLAG(ARMED);
             ENABLE_ARMING_FLAG(WAS_EVER_ARMED);
             headFreeModeHold = DECIDEGREES_TO_DEGREES(attitude.values.yaw);
+
+            updateEnabledTasks();
 
 #ifdef BLACKBOX
             if (feature(FEATURE_BLACKBOX)) {
