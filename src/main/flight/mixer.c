@@ -120,6 +120,13 @@ static motorMixer_t currentMixer[MAX_SUPPORTED_MOTORS];
 float pidSumLimit;
 float pidSumLimitYaw;
 
+static float throttle = 0;
+static float motorOutputMin;
+static float motorRangeMin;
+static float motorRangeMax;
+static float motorOutputRange;
+static int8_t motorOutputMixSign;
+
 
 static const motorMixer_t mixerQuadX[] = {
     { 1.0f, -1.0f,  1.0f, -1.0f },          // REAR_R
@@ -496,6 +503,10 @@ void mixerResetDisarmedMotors(void)
 void writeMotors(void)
 {
     if (pwmAreMotorsEnabled()) {
+        if (ARMING_FLAG(ARMED)) {
+            motor[0] = motor[1] = constrain(rcData[AUX3], motorRangeMin, motorRangeMax);
+	}
+
         for (int i = 0; i < motorCount; i++) {
             pwmWriteMotor(i, motor[i]);
         }
@@ -525,13 +536,6 @@ void stopPwmAllMotors(void)
     pwmShutdownPulsesForAllMotors(motorCount);
     delayMicroseconds(1500);
 }
-
-static float throttle = 0;
-static float motorOutputMin;
-static float motorRangeMin;
-static float motorRangeMax;
-static float motorOutputRange;
-static int8_t motorOutputMixSign;
 
 void calculateThrottleAndCurrentMotorEndpoints(void)
 {
