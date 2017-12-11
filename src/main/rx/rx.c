@@ -195,7 +195,7 @@ static uint8_t nullFrameStatus(void)
     return RX_FRAME_PENDING;
 }
 
-#define REQUIRED_CHANNEL_MASK 0x0F // first 4 channels
+#define REQUIRED_CHANNEL_MASK 0x01 // first channel
 
 static uint8_t validFlightChannelMask;
 

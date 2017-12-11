@@ -17,8 +17,6 @@
 
 #pragma once
 
-#define TELEMETRY_IBUS
-
 #define TARGET_CONFIG
 #define TARGET_VALIDATECONFIG
 #define USE_HARDWARE_REVISION_DETECTION
@@ -99,10 +97,6 @@
 #define ACC_MMA8452_ALIGN       CW90_DEG
 #define ACC_BMA280_ALIGN        CW0_DEG
 #define ACC_MPU6500_ALIGN       CW0_DEG
-
-#define BARO
-#define USE_BARO_MS5611 // needed for Flip32 board
-#define USE_BARO_BMP280
 
 /*
 #define MAG

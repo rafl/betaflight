@@ -160,23 +160,7 @@ void updateArmingStatus(void)
             unsetArmingDisabled(ARMING_DISABLED_BOOT_GRACE_TIME);
         }
 
-        // If switch is used for arming then check it is not defaulting to on when the RX link recovers from a fault
-        if (!isUsingSticksForArming()) {
-            static bool hadRx = false;
-            const bool haveRx = rxIsReceivingSignal();
-
-            const bool justGotRxBack = !hadRx && haveRx;
-
-            if (justGotRxBack && IS_RC_MODE_ACTIVE(BOXARM)) {
-                // If the RX has just started to receive a signal again and the arm switch is on, apply arming restriction
-                setArmingDisabled(ARMING_DISABLED_BAD_RX_RECOVERY);
-            } else if (haveRx && !IS_RC_MODE_ACTIVE(BOXARM)) {
-                // If RX signal is OK and the arm switch is off, remove arming restriction
-                unsetArmingDisabled(ARMING_DISABLED_BAD_RX_RECOVERY);
-            }
-
-            hadRx = haveRx;
-        }
+        unsetArmingDisabled(ARMING_DISABLED_BAD_RX_RECOVERY);
 
         if (IS_RC_MODE_ACTIVE(BOXFAILSAFE)) {
             setArmingDisabled(ARMING_DISABLED_BOXFAILSAFE);
@@ -216,26 +200,7 @@ void updateArmingStatus(void)
             }
         }
 
-        if (!isUsingSticksForArming()) {
-          /* Ignore ARMING_DISABLED_CALIBRATING if we are going to calibrate gyro on first arm */
-          bool ignoreGyro = armingConfig()->gyro_cal_on_first_arm
-                         && !(getArmingDisableFlags() & ~(ARMING_DISABLED_ARM_SWITCH | ARMING_DISABLED_CALIBRATING));
-
-          /* Ignore ARMING_DISABLED_THROTTLE (once arm switch is on) if we are in 3D mode */
-          bool ignoreThrottle = feature(FEATURE_3D)
-                             && !IS_RC_MODE_ACTIVE(BOX3DDISABLE)
-                             && !(getArmingDisableFlags() & ~(ARMING_DISABLED_ARM_SWITCH | ARMING_DISABLED_THROTTLE));
-
-          // If arming is disabled and the ARM switch is on
-          if (isArmingDisabled()
-              && !ignoreGyro
-              && !ignoreThrottle
-              && IS_RC_MODE_ACTIVE(BOXARM)) {
-              setArmingDisabled(ARMING_DISABLED_ARM_SWITCH);
-          } else if (!IS_RC_MODE_ACTIVE(BOXARM)) {
-              unsetArmingDisabled(ARMING_DISABLED_ARM_SWITCH);
-          }
-        }
+        unsetArmingDisabled(ARMING_DISABLED_ARM_SWITCH);
 
         if (isArmingDisabled()) {
             warningLedFlash();
