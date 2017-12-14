@@ -504,8 +504,7 @@ void writeMotors(void)
 {
     if (pwmAreMotorsEnabled()) {
         if (ARMING_FLAG(ARMED)) {
-            motor[0] = constrain(rcData[AUX3], motorRangeMin, motorRangeMax);
-            motor[1] = motor[0];
+            motor[0] = motor[1] = constrain(rcData[AUX3], 1700, 2000);
 	}
 
         for (int i = 0; i < motorCount; i++) {
