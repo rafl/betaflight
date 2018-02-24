@@ -279,6 +279,7 @@ SIZE_OPTIMISED_SRC := $(SIZE_OPTIMISED_SRC) \
             drivers/bus_i2c_config.c \
             drivers/bus_spi_config.c \
             drivers/bus_spi_pinconfig.c \
+            drivers/camera_control.c \
             drivers/compass/compass_ak8963.c \
             drivers/compass/compass_ak8975.c \
             drivers/compass/compass_fake.c \

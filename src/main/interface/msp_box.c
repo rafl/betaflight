@@ -255,7 +255,7 @@ void initActiveBoxIds(void)
     }
 #endif
 
-#ifdef USE_RCDEVICE
+#if defined(USE_RCDEVICE) || defined(USE_CAMERA_CONTROL)
     BME(BOXCAMERA1);
     BME(BOXCAMERA2);
     BME(BOXCAMERA3);

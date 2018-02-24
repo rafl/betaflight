@@ -19,6 +19,7 @@
 
 #include "io_types.h"
 #include "pg/pg.h"
+#include "fc/rc_modes.h"
 
 typedef enum {
     CAMERA_CONTROL_KEY_ENTER,
@@ -36,11 +37,19 @@ typedef enum {
     CAMERA_CONTROL_MODES_COUNT
 } cameraControlMode_e;
 
+typedef struct {
+  cameraControlKey_e key;
+  uint8_t repeat;
+} cameraControlKeyRepeat_t;
+
+#define CAMERA_CONTROL_MAX_SEQ_LEN 31 // 30 non-repeated key-presses plus a terminator
+
 typedef struct cameraControlConfig_s {
     cameraControlMode_e mode;
     // measured in 10 mV steps
     uint16_t refVoltage;
     uint16_t keyDelayMs;
+    uint16_t seqPauseMs;
     // measured 100 Ohm steps
     uint16_t internalResistance;
 
@@ -48,6 +57,12 @@ typedef struct cameraControlConfig_s {
 } cameraControlConfig_t;
 
 PG_DECLARE(cameraControlConfig_t, cameraControlConfig);
+
+typedef struct {
+    cameraControlKeyRepeat_t seq[BOXCAMERA3 - BOXCAMERA1][CAMERA_CONTROL_MAX_SEQ_LEN];
+} cameraControlKeySequence_t;
+
+PG_DECLARE_ARRAY(cameraControlKeySequence_t, 1 + BOXCAMERA3 - BOXCAMERA1, cameraControlKeySequences);
 
 void cameraControlInit(void);
 

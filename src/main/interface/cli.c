@@ -735,6 +735,117 @@ static void printAux(uint8_t dumpMask, const modeActivationCondition_t *modeActi
     }
 }
 
+static cameraControlKey_e keyFor(char c)
+{
+    switch (tolower(c)) {
+        case 'l':
+            return CAMERA_CONTROL_KEY_LEFT;
+            break;
+        case 'r':
+            return CAMERA_CONTROL_KEY_RIGHT;
+            break;
+        case 'u':
+            return CAMERA_CONTROL_KEY_UP;
+            break;
+        case 'd':
+            return CAMERA_CONTROL_KEY_DOWN;
+            break;
+        case 'e':
+            return CAMERA_CONTROL_KEY_ENTER;
+            break;
+        default:
+            return CAMERA_CONTROL_KEYS_COUNT;
+            break;
+    }
+}
+
+static char formatKey(cameraControlKey_e k) {
+    switch (k) {
+        case CAMERA_CONTROL_KEY_LEFT:
+            return 'l';
+            break;
+        case CAMERA_CONTROL_KEY_RIGHT:
+            return 'r';
+            break;
+        case CAMERA_CONTROL_KEY_UP:
+            return 'u';
+            break;
+        case CAMERA_CONTROL_KEY_DOWN:
+            return 'd';
+            break;
+        case CAMERA_CONTROL_KEY_ENTER:
+            return 'e';
+            break;
+        default:
+            return 'X';
+            break;
+    }
+}
+
+static void setCameraControlSequenceKey(int from, int to, int keyPos, cameraControlKey_e key, uint8_t repeat)
+{
+    cameraControlKeySequencesMutable(from - 1)->seq[MOD(to - from, 3) - 1][keyPos].key = key;
+    cameraControlKeySequencesMutable(from - 1)->seq[MOD(to - from, 3) - 1][keyPos].repeat = repeat;
+    cliPrintLinef("%d->%d:%d %d%c", from - 1, MOD(to - from, 3) - 1, keyPos, repeat, formatKey(key));
+}
+
+// TODO: better validation and errors
+static void cliCamSeq(char *cmdline)
+{
+    if (isEmpty(cmdline)) {
+        for (int i = 0; i <= BOXCAMERA3 - BOXCAMERA1; ++i) {
+            for (int j = 0; j < BOXCAMERA3 - BOXCAMERA1; ++j) {
+                cliPrintf("seq %d -> %d:", i + 1, ((i + j + 1) % 3) + 1);
+                const cameraControlKeyRepeat_t *seq = cameraControlKeySequences(i)->seq[j];
+                while (seq->key != CAMERA_CONTROL_KEYS_COUNT) {
+                    cliPrintf(" %d %c", seq->repeat, formatKey(seq->key));
+                    ++seq;
+                }
+                cliPrintf("\r\n");
+            }
+        }
+        return;
+    }
+
+    char *saveptr;
+    char *tok = strtok_r(cmdline, " ", &saveptr);
+    int from = atoi(tok);
+    tok = strtok_r(NULL, " ", &saveptr);
+    int to = atoi(tok);
+
+    tok = strtok_r(NULL, " ", &saveptr);
+    int keyPos = 0;
+    cliPrintLinef("%d %d", from, to);
+    while (tok) {
+        int repeat = 1;
+        if (isdigit(*tok)) {
+            repeat = atoi(tok);
+	    if (repeat <= 0) {
+		    cliShowParseError();
+	    }
+
+	    tok = strtok_r(NULL, " ", &saveptr);
+        }
+
+        cameraControlKey_e key = keyFor(*tok);
+        if (key == CAMERA_CONTROL_KEYS_COUNT) {
+            cliShowParseError();
+            return;
+        }
+
+        setCameraControlSequenceKey(from, to, keyPos, key, repeat);
+
+        if (++keyPos >= CAMERA_CONTROL_MAX_SEQ_LEN) {
+            cliShowParseError();
+	    return;
+        }
+
+	tok = strtok_r(NULL, " ", &saveptr);
+    }
+
+    setCameraControlSequenceKey(from, to, keyPos, CAMERA_CONTROL_KEYS_COUNT, 1);
+}
+
 static void cliAux(char *cmdline)
 {
     int i, val = 0;
@@ -3682,6 +3793,9 @@ const clicmd_t cmdTable[] = {
         "\t<+|->[name]", cliBeeper),
 #endif
     CLI_COMMAND_DEF("bl", "reboot into bootloader", NULL, cliBootloader),
+#ifdef USE_CAMERA_CONTROL
+    CLI_COMMAND_DEF("camseq", "configure camera control key sequences", "<from> <to> <seq>", cliCamSeq),
+#endif
 #ifdef USE_LED_STRIP
     CLI_COMMAND_DEF("color", "configure colors", NULL, cliColor),
 #endif

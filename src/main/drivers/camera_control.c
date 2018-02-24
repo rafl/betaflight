@@ -26,6 +26,7 @@
 #include "pwm_output.h"
 #include "time.h"
 #include "pg/pg_ids.h"
+#include "fc/rc_modes.h"
 
 #if defined(STM32F40_41xxx)
 #define CAMERA_CONTROL_TIMER_HZ   MHZ_TO_HZ(84)
@@ -66,6 +67,7 @@ PG_RESET_TEMPLATE(cameraControlConfig_t, cameraControlConfig,
     .mode = CAMERA_CONTROL_MODE_HARDWARE_PWM,
     .refVoltage = 330,
     .keyDelayMs = 180,
+    .seqPauseMs = 250,
     .internalResistance = 470,
     .ioTag = IO_TAG(CAMERA_CONTROL_PIN)
 );
@@ -77,7 +79,9 @@ static struct {
     uint32_t period;
 } cameraControlRuntime;
 
+#ifdef CAMERA_CONTROL_HARDWARE_PWM_AVAILABLE
 static uint32_t endTimeMillis;
+#endif
 
 #ifdef CAMERA_CONTROL_SOFTWARE_PWM_AVAILABLE
 void TIM6_DAC_IRQHandler(void)
@@ -149,17 +153,101 @@ void cameraControlInit(void)
     }
 }
 
-void cameraControlProcess(uint32_t currentTimeUs)
-{
-    if (endTimeMillis && currentTimeUs >= 1000 * endTimeMillis) {
-        if (CAMERA_CONTROL_MODE_HARDWARE_PWM == cameraControlConfig()->mode) {
-            *cameraControlRuntime.channel.ccr = cameraControlRuntime.period;
-        } else if (CAMERA_CONTROL_MODE_SOFTWARE_PWM == cameraControlConfig()->mode) {
+static const cameraControlKeyRepeat_t *seqKey;
 
+void triggerCameraKeySequencePress()
+{
+    static uint8_t repeatNum;
+    static uint32_t lastKeyMs;
+
+    if (millis() < lastKeyMs + cameraControlConfig()->seqPauseMs) {
+        return;
+    }
+
+    if (seqKey->key == CAMERA_CONTROL_KEYS_COUNT) {
+        seqKey = NULL;
+        return;
+    }
+
+    if (!repeatNum) {
+        repeatNum = seqKey->repeat;
+    }
+
+    cameraControlKeyPress(seqKey->key, 0);
+    lastKeyMs = millis();
+
+    if (!--repeatNum) {
+        ++seqKey;
+    }
+}
+
+PG_REGISTER_ARRAY_WITH_RESET_FN(cameraControlKeySequence_t, 1 + BOXCAMERA3 - BOXCAMERA1, cameraControlKeySequences, PG_CAMERA_CONTROL_KEY_SEQUENCE, 0);
+
+void pgResetFn_cameraControlKeySequences(cameraControlKeySequence_t *seqs) {
+    for (int i = 0; i <= BOXCAMERA3 - BOXCAMERA1; ++i) {
+        for (int j = 0; j < BOXCAMERA3 - BOXCAMERA1; ++j) {
+            seqs[i].seq[j][0].key = CAMERA_CONTROL_KEYS_COUNT;
+            seqs[i].seq[j][0].repeat = 0;
+        }
+    }
+}
+
+void cameraKeySequenceProcess() {
+    static int cameraMode, activeBoxMode, prevBoxMode;
+    static uint32_t modeActiveSince;
+
+    if (seqKey != NULL) {
+        triggerCameraKeySequencePress();
+        return;
+    }
+
+    // We consider these modes mutually exclusive and expect users to
+    // configure them in a non-overlapping way.
+    for (boxId_e i = BOXCAMERA1; i <= BOXCAMERA3; ++i) {
+        if (!IS_RC_MODE_ACTIVE(i)) {
+            continue;
         }
 
+        if (i == cameraMode) {
+            return;
+        }
+
+        if (activeBoxMode != i) {
+            activeBoxMode = i;
+            modeActiveSince = millis();
+        }
+
+        if (modeActiveSince + 300 < millis()) {
+            return;
+        }
+
+        prevBoxMode = cameraMode;
+        cameraMode = activeBoxMode;
+        modeActiveSince = 0;
+
+        if (!prevBoxMode) {
+            return;
+        }
+
+        seqKey = cameraControlKeySequences(prevBoxMode - BOXCAMERA1)->seq[MOD(cameraMode - prevBoxMode, 3) - 1];
+        return;
+    }
+}
+
+void cameraControlProcess(uint32_t currentTimeUs)
+{
+#ifdef CAMERA_CONTROL_HARDWARE_PWM_AVAILABLE
+    if (CAMERA_CONTROL_MODE_HARDWARE_PWM == cameraControlConfig()->mode
+    && endTimeMillis && currentTimeUs >= 1000 * endTimeMillis) {
+        *cameraControlRuntime.channel.ccr = cameraControlRuntime.period;
         endTimeMillis = 0;
     }
+#endif
+
+#ifdef CAMERA_CONTROL_HARDWARE_PWM_AVAILABLE
+    if (CAMERA_CONTROL_MODE_HARDWARE_PWM != cameraControlConfig()->mode || !endTimeMillis)
+#endif
+    cameraKeySequenceProcess();
 }
 
 static const int buttonResistanceValues[] = { 45000, 27000, 15000, 6810, 0 };
